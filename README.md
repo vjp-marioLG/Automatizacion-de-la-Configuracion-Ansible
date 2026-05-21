@@ -25,8 +25,6 @@ En sesiones anteriores desplegamos la aplicación `store-app` con base de datos 
 
 [Dejando todo en órden](#dejando-todo-en-órden)
 
-[Entrega](#entrega)
-
 ---
 # OBJETIVOS
 
