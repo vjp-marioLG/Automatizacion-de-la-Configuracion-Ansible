@@ -255,7 +255,9 @@ ssh -i ~/.ssh/minikube_key docker@$(minikube ip --node m03 --profile=ansible)
 # escribir yes cuando haga pregunta de si queremos conectar y añadir a authorized.
 # exit para salir
 ```
+![](img/17.png)
 
+![](img/18.png)
 ---
 # CREAR INVENTARIO ANSIBLE
 
@@ -263,7 +265,7 @@ Recordamos que un `inventory` es un archivo donde tenemos el **nombre** e **ip**
 Vamos a crear el Inventario de hosts de nuestro despliegue: `inventory.ini` de manera automático con un script:
 
 
-[`crea_inventory.sh`](./files/crea_inventory.sh)
+crea_inventory.sh
 ```bash
 # Script que genera inventario por función
 # IPs exactas: Almacenar las Ip de cada nodo en las variablesCONTROL_IP=$(minikube ip --profile=ansible)
@@ -289,10 +291,9 @@ ansible-m03 ansible_host=$WORKER3_IP ansible_user=docker ansible_ssh_private_key
 db_nodes
 app_nodes
 EOF
-
-# Probar ping
-ansible all -i inventory.ini -m ping
 ```
+![](img/19.png)
+
 
 1. Crear el archivo `crea_inventory.sh`, introducimos el contenido, damos permisos y ejecutamos:
 
@@ -304,12 +305,14 @@ nano crea_inventory.sh
 chmod +x crea_inventory.sh
 # ejecutar script
 ./crea_inventory.sh
+# Probar ping
+ansible all -i inventory.ini -m ping
 ```
 La ejecución debe de dar algo así:
 
-![](images/image05.png)
+![](img/20.png)
 
-Y el `inventory.ini` quedar así salvo direcciones ip. Las tuyas no serán las mismas:
+Y el `inventory.ini` quedará así
 
 ```conf
 [control_plane]
@@ -325,6 +328,8 @@ k8s-worker3 ansible_host=192.168.49.4 ansible_user=docker ansible_ssh_private_ke
 app_nodes
 db_nodes
 ```
+![](img/21.png)
+
 
 Si sale aviso de estar utilizando python 3.11... se puede silenciar con:
 
@@ -342,7 +347,9 @@ ansible-inventory -i inventory.ini --list
 ansible all -i inventory.ini -m ping
 ```
 
-![](images/image06.png)
+![](img/22.png)
+
+![](img/23.png)
 
 
 ---
@@ -369,7 +376,8 @@ Utilizamos los módulos **group** y **user**.
 
 1. En el siguiente `playbook` **crear un usuario y un grupo** con nombre **maint** que realizará labores de mantenimiento en **todos los nodos**:
 
-[`./create_maint_user.yml`](./files/create_maint_user.yml)
+./create_maint_user.yml
+
 ```yaml
 ---
 - name: Crear directorios de mantenimiento y desplegar clave publica
@@ -394,41 +402,21 @@ Utilizamos los módulos **group** y **user**.
       create_home: yes
       state: present
 ```
+![](img/24.png)
 
 2. Ejecutar `playbook`:
 
 ```bash
 ansible-playbook -i inventory.ini create_maint_user.yml
 ```
-
-![](images/image09.png)
+![](img/25.png)
 
 3. Comprobar que se han creado los usuarios. Lo podemos hacer con **Ansible** ya que todavía no le hemos pasado la clave ssh:
 
 ```bash
 ansible all_workers -i inventory.ini -m shell -a "id maint"
 ```
-![](images/image10.png)
-
-
-
-## Análisis Ansible
-
-En la siguiente imágen podemos ver el resultado de una ejecución de ansible.
-
-![](images/image08.png)
-
-
-Vemos campos:
-- **Tarea**.
-- **Ejecución** con logs de ejecución en color verde y se ejecuta OK  y **error** en colores rojos en el caso de que no se ejecute satisfactoriamente
-- **Resumen**: donde nos encontramos los siguientes campos:
-  - **`ok`**: Tareas ejecutadas correctamente sin realizar cambios.
-  - **`changed`**:La tarea se ejecutó y modificó algo en el sistema.
-  - **`failed`**: La tarea produjo un error y el playbook se detuvo para ese host.
-  - **`unreachable`**: Ansible no pudo conectarse al host.
-  - **`skipped`**: La tarea fue omitida normalmente por una condición when.
-  - **`ignored`**: La tarea falló, pero Ansible ignoró el error debido a que se declaró con `ignore_errors:yes`.
+![](img/26.png)
 
 
 ## File & copy
@@ -444,7 +432,7 @@ Para crear directorios:
 nano manage_maint_files.yml
 ```
 
-[./manage_maint_files.yml](./files/manage_maint_files.yml)
+./manage_maint_files.yml
 ```yaml
 ---
   hosts: all_workers
@@ -473,11 +461,15 @@ nano manage_maint_files.yml
         mode: '0750'
       when: "'db_nodes' in group_names"
 ```
+![](img/27.png)
+
 2. Ejecutar `playbook`:
 
 ```bash
  ansible-playbook -i inventory.ini manage_maint_files.yml
  ```
+![](img/28.png)
+
 3. Comprobar ejecución:
 
 ```bash
@@ -487,9 +479,9 @@ ansible app_nodes -i inventory.ini -m shell -a "ls -la /opt/appmaint/"
 # Nodos DB: solo /opt/dbmaint  
 ansible db_nodes -i inventory.ini -m shell -a "ls -la /opt/dbmaint/"
 ```
-![](images/image11.png)
+![](img/29.png)
 
-4. Descargar en la carpeta del proyecto el [archivo de la clave pública que tenemos aquí](./files/maintain_key.pub)
+4. Descargar en la carpeta del proyecto el archivo de la clave pública que tenemos
 
 5. Crear el siguiente playbook para añadir clave pública de usuario `maint` para que pueda conectarse a los nodos.:
 
@@ -497,7 +489,7 @@ ansible db_nodes -i inventory.ini -m shell -a "ls -la /opt/dbmaint/"
 nano manage_public_key_maint.yml
 ```
 
-[`./manage_public_key_maint.yml`](./files/manage_public_key_maint.yml)
+./manage_public_key_maint.yml
 ```yaml
 ---
 - name: Anadir clave publica usuario maint
@@ -533,22 +525,28 @@ nano manage_public_key_maint.yml
       key: "{{ lookup('file', './maintain_key.pub') }}"
       manage_dir: true
 ```
+
+![](img/30.png)
+
 6. Ejecutar `playbook`
 ```bash
 ansible-playbook -i inventory.ini manage_public_key_maint.yml
 ```
-> Observa como:
+
+![](img/31.png)
+
+> Observamos como:
 > - Creamos directorio .ssh para almacenar archivo de clave pública
 > - Copiar cláve pública.
 > - Añadirla al `authorized_keys`
 
 ![](images/image12.png)
 
-5. **Copia la clave privada** que tienes en [./files/private_maintain_key](./files/private_maintain_key) en el directorio .ssh de tu directorio personal: **/home/tu_usuario/.ssh/**. De esta manera cuando nos intentemos conectar por ssh como usuario **maint** nos dejará.
+5. **Copiamos la clave privada** que tenemos y la copiamos en el directorio .ssh de tu directorio personal: **/home/tu_usuario/.ssh/**. De esta manera cuando nos intentemos conectar por ssh como usuario **maint** nos dejará.
 
-> ¡¡¡OJO¡¡¡ revisa que es posible que te la **descargue con extensión .txt**. Si es así lo **renombras** sin extensión.
+![](img/32.png)
 
-6. **Comprueba las direcciones IP de los nodos y que nos deja conectar como usuario `maint`** en los nodso:
+6. **Comprobamos las direcciones IP de los nodos y que nos deja conectar como usuario `maint`** en los nodos:
 
 ```bash
 nano inventory.ini
@@ -556,8 +554,9 @@ nano inventory.ini
 ssh -i ~/.ssh/maintain_key maint@192.168.49.3 "hostname; whoami; pwd"
 ssh -i ~/.ssh/maintain_key maint@192.168.49.4 "hostname; whoami; pwd" 
 ```
+![](img/33.png)
 
-![](images/image13.png)
+![](img/34.png)
 
 7. **Ejecutar** directamente módulo **file** desde `Ansible`:
 
@@ -586,7 +585,7 @@ nano manage_public_key_maint.yml
 ```
 El contenido es el siguiente
 
-[`./manage_anadir_paquetes_maint.yml`](./files/manage_anadir_paquetes_maint.yml)
+./manage_anadir_paquetes_maint.yml
 ```yaml
 ---
 - name: Añadir software mantenimiento en  todos los nodos
@@ -609,12 +608,14 @@ El contenido es el siguiente
         state: absent
 
 ```
+![](img/35.png)
+
 2. Ejecutar la tarea:
 
 ```bash
 ansible-playbook -i inventory.ini manage_anadir_paquetes_maint.yml
 ```
-![](images/image14.png)
+![](img/36.png)
 
 3. Comprobar si se han instalado los paquetes:
 
@@ -622,7 +623,7 @@ ansible-playbook -i inventory.ini manage_anadir_paquetes_maint.yml
 ansible all -i inventory.ini -m shell -a "hostname ; dpkg -l | grep -E 'htop|curl|tree|jq|net-tools|vim' "  
 ```
 
-![](images/image15.png)
+![](img/37.png)
 
 4. Instalar directamente desde Ansible:
 
@@ -651,11 +652,8 @@ nano manage_servicio_nginx.yml
 ```
 El contenido es el siguiente
 
-[`./manage_servicio_nginx.yml`](./files/manage_servicio_nginx.yml)
-```yaml
+./manage_servicio_nginx.yml
 
-
-[`./manage_anadir_paquetes_maint.yml`](./files/manage_anadir_paquetes_maint.yml)
 ```yaml
 ---
 - name: Instalar y validar Nginx
@@ -699,19 +697,21 @@ El contenido es el siguiente
       ansible.builtin.debug:
         var: http_check.status
 ```
+![](img/38.png)
+
 2. Ejecutar la tarea:
 
 ```bash
 ansible-playbook -i inventory.ini manage_servicio_nginx.yml
 ```
-![](images/image14.png)
+![](img/39.png)
 
 3. Aunque ya está dentro de la tarea, podemos comprobarlo:
 
 ```bash
 ansible all -i inventory.ini -m shell -a "curl -s -o /dev/null -w '%{http_code}\\n' localhost:80 || echo 'ERROR' "  
 ```
-![](images/image17.png)
+![](img/40.png)
 
 Si lo hubieramos querido realizar sin playbook:
 
@@ -732,9 +732,15 @@ ansible all -i inventory.ini -m shell -a "systemctl status nginx | grep Active"
 ansible all -i inventory.ini -m shell -a "curl -s -o /dev/null -w '%{http_code}\n' localhost:80 || echo 'ERROR'"
 ```
 
-> En el resultado vemos cómo nos devuleve un código 200 como respuesta OK.
+![](img/41.png)
 
-![](images/image14.png)
+![](img/42.png)
+
+![](img/43.png)
+
+![](img/44.png)
+
+![](img/45.png)
 
 ---
 # ORGANIZACIÓN DE PROYECTOS EN ANSIBLE
@@ -928,3 +934,4 @@ minikube stop -p ansible
 # borrar minikube
 minikube delete -p ansible
 ```
+![](img/46.png)
