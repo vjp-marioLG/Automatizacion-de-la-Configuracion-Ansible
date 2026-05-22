@@ -176,7 +176,7 @@ minikube service store-app --url -p ansible
 
 7. Comprobar que aplicación funciona.
 
-Acceder a la dirección del `NodePort` de Minikube proporcionada. En mi caso: http://192.168.49.2:31020
+Acceder a la dirección del `NodePort` de Minikube proporcionada. En mi caso: http://192.168.58.2:32041
 
 ![](img/11.png)
 
